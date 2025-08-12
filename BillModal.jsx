@@ -70,6 +70,8 @@ const BillModal = ({ bill, onClose, onPrint }) => {
         }
       }
 
+      // Wait a tick so the print-only container is rendered before invoking print
+      await new Promise((resolve) => setTimeout(resolve, 50));
       window.print();
 
       queryClient.invalidateQueries(['user-bookings']);
@@ -103,8 +105,12 @@ const BillModal = ({ bill, onClose, onPrint }) => {
 
       const response = await billingAPI.downloadBill(bill.booking.id);
 
-      if (response) {
-        const blob = new Blob([response], { type: 'application/pdf' });
+      // Support both Axios response types: arraybuffer/blob or data payload
+      const fileData = response?.data ?? response;
+
+      if (fileData) {
+        const contentType = (response?.headers?.['content-type']) || 'application/pdf';
+        const blob = fileData instanceof Blob ? fileData : new Blob([fileData], { type: contentType });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -414,8 +420,20 @@ const BillModal = ({ bill, onClose, onPrint }) => {
 
   return (
     <>
+      {/* Local print CSS fallback to work even if Tailwind print: variant isn't available */}
+      <style>{`
+        @media print {
+          .no-print { display: none !important; }
+          .print-only { display: block !important; }
+          html, body { background: #fff !important; }
+        }
+        @media screen {
+          .print-only { display: none !important; }
+        }
+      `}</style>
+
       {/* Screen-only modal with actions */}
-      <div className="fixed inset-0 bg-gray-900/50 bg-opacity-50 flex items-center justify-center z-50 p-4 print:hidden">
+      <div className="fixed inset-0 bg-gray-900/50 bg-opacity-50 flex items-center justify-center z-50 p-4 print:hidden no-print">
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-auto">
           {/* Header with actions (hidden in print) */}
           <div className="sticky top-0 bg-white z-10 p-6 border-b border-gray-100 flex justify-between items-center">
@@ -452,7 +470,7 @@ const BillModal = ({ bill, onClose, onPrint }) => {
       </div>
 
       {/* Print-only clean container (no buttons, no overlay) */}
-      <div className="hidden print:block">
+      <div className="print-only">
         <div className="bg-white w-full">
           <div className="p-6 flex items-center justify-between">
             <div className="flex items-center space-x-3">
