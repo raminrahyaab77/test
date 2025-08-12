@@ -431,9 +431,15 @@ const BillModal = ({ bill, onClose, onPrint }) => {
       {/* Local print CSS fallback to work even if Tailwind print: variant isn't available */}
       <style>{`
         @media print {
+          @page { size: A4; margin: 16mm; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .no-print { display: none !important; }
           .print-only { display: block !important; }
           html, body { background: #fff !important; }
+          .invoice-print { width: 100%; max-width: 900px; margin: 0 auto; }
+          .invoice-print .sticky, .invoice-print .shadow-2xl, .invoice-print .rounded-xl { box-shadow: none !important; border-radius: 0 !important; }
+          .invoice-print table { border-collapse: collapse; width: 100%; }
+          .invoice-print th, .invoice-print td { border: 1px solid #e5e7eb; }
         }
         @media screen {
           .print-only { display: none !important; }
@@ -442,7 +448,7 @@ const BillModal = ({ bill, onClose, onPrint }) => {
 
       {/* Screen-only modal with actions */}
       <div className="fixed inset-0 bg-gray-900/50 bg-opacity-50 flex items-center justify-center z-50 p-4 print:hidden no-print">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-auto">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-auto invoice-print">
           {/* Header with actions (hidden in print) */}
           <div className="sticky top-0 bg-white z-10 p-6 border-b border-gray-100 flex justify-between items-center">
             <div className="flex items-center space-x-3">
@@ -480,16 +486,16 @@ const BillModal = ({ bill, onClose, onPrint }) => {
       {/* Print-only clean container (no buttons, no overlay). Rendered via portal to avoid hidden ancestors */}
       {typeof window !== 'undefined' && createPortal(
         <div className="print-only">
-          <div className="bg-white w-full">
-            <div className="p-6 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <FaReceipt className="text-indigo-600 text-2xl" />
-                <h2 className="text-2xl font-bold text-gray-800">Invoice</h2>
-                <StatusPill />
-              </div>
+                  <div className="bg-white w-full invoice-print">
+          <div className="p-6 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <FaReceipt className="text-indigo-600 text-2xl" />
+              <h2 className="text-2xl font-bold text-gray-800">Invoice</h2>
+              <StatusPill />
             </div>
-            <InvoiceBody />
           </div>
+          <InvoiceBody />
+        </div>
         </div>,
         document.body
       )}
