@@ -111,37 +111,13 @@ const BillModal = ({ bill, onClose, onPrint }) => {
         return;
       }
 
-      // Request PDF blob; prefer axios-style config if supported
-      let response;
-      try {
-        response = await billingAPI.downloadBill(
-          bill.booking.id,
-          { responseType: 'blob', headers: { Accept: 'application/pdf' } }
-        );
-      } catch {
-        // fallback without config
-        response = await billingAPI.downloadBill(bill.booking.id);
-      }
+      const response = await billingAPI.downloadBill(bill.booking.id);
 
       // Support both Axios response types: arraybuffer/blob or data payload
       const fileData = response?.data ?? response;
 
       if (fileData) {
         const contentType = (response?.headers?.['content-type']) || 'application/pdf';
-
-        // If server returned JSON error as blob, decode to show message
-        if (typeof window !== 'undefined' && contentType?.includes('application/json') && fileData instanceof Blob) {
-          const text = await fileData.text();
-          try {
-            const json = JSON.parse(text);
-            toast.error(json?.message || 'Failed to download bill');
-            return;
-          } catch {
-            toast.error('Failed to download bill');
-            return;
-          }
-        }
-
         const blob = fileData instanceof Blob ? fileData : new Blob([fileData], { type: contentType });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -153,7 +129,7 @@ const BillModal = ({ bill, onClose, onPrint }) => {
         setTimeout(() => {
           document.body.removeChild(link);
           window.URL.revokeObjectURL(url);
-        }, 200);
+        }, 100);
 
         toast.success('Bill downloaded successfully');
       } else {
