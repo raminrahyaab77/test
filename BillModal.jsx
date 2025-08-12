@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { billingAPI, paymentAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -24,6 +24,7 @@ import {
   FiCreditCard
 } from 'react-icons/fi';
 import { FaRegCheckCircle, FaRegClock, FaReceipt } from 'react-icons/fa';
+import { createPortal } from 'react-dom';
 
 const BillModal = ({ bill, onClose, onPrint }) => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -89,7 +90,14 @@ const BillModal = ({ bill, onClose, onPrint }) => {
     }
   };
 
-  const handleDownload = async () => {
+  const handleDownload = async () => { // ensure axios requests blobs
+    try {
+      // If your billingAPI allows passing responseType per-call, prefer that.
+      if (billingAPI?.setResponseType) {
+        billingAPI.setResponseType('blob');
+      }
+    } catch {}
+
     try {
       setIsProcessing(true);
 
@@ -469,19 +477,22 @@ const BillModal = ({ bill, onClose, onPrint }) => {
         </div>
       </div>
 
-      {/* Print-only clean container (no buttons, no overlay) */}
-      <div className="print-only">
-        <div className="bg-white w-full">
-          <div className="p-6 flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <FaReceipt className="text-indigo-600 text-2xl" />
-              <h2 className="text-2xl font-bold text-gray-800">Invoice</h2>
-              <StatusPill />
+      {/* Print-only clean container (no buttons, no overlay). Rendered via portal to avoid hidden ancestors */}
+      {typeof window !== 'undefined' && createPortal(
+        <div className="print-only">
+          <div className="bg-white w-full">
+            <div className="p-6 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <FaReceipt className="text-indigo-600 text-2xl" />
+                <h2 className="text-2xl font-bold text-gray-800">Invoice</h2>
+                <StatusPill />
+              </div>
             </div>
+            <InvoiceBody />
           </div>
-          <InvoiceBody />
-        </div>
-      </div>
+        </div>,
+        document.body
+      )}
     </>
   );
 };
